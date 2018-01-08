@@ -1,0 +1,189 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<script src="~/Scripts/jquery-1.10.2.min.js"></script>
+<script src="~/Scripts/jquery-easyui-1.3.6/jquery.easyui.min.js"></script>
+<script src="~/Scripts/jquery-easyui-1.3.6/locale/easyui-lang-zh_CN.js"></script>
+<link href="~/Scripts/jquery-easyui-1.3.6/themes/gray/easyui.css" rel="stylesheet" />
+<link href="~/Scripts/jquery-easyui-1.3.6/themes/icon.css" rel="stylesheet" />
+<script src="~/Scripts/echarts.min.js"></script>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+
+</head>
+
+<body>
+    <div style="width:100%;height:100%">
+        <div style="width:100%;height:100%;margin-left:auto">
+            <div style="width:30%;height:20%;margin-left:2%;margin-top:4%;position:absolute">
+                <div>
+                    <select id="QianSelect"><option value="0">--请选择--</option> </select>
+                    <select id="HouSelect"><option value="0">--请选择--</option></select>
+                </div>
+              
+                <a href="#" class="easyui-linkbutton" id="serarch" iconCls="icon-search" onclick="return FirstSearch();">查询</a>
+            </div>
+            <div class="row" style="margin-left:17%;width:75%;height:50%;position:absolute;">
+                <div class="box col-md-12">
+                    <div class="box-content">
+                        <div id="main" style="width: 110%; height:400%"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>
+<script type="text/javascript">
+    $(function () {
+        //上面第一个下拉框
+        $.ajax({
+            type: "post",
+            async: false,
+            url: "/CollationMap/SelectQian",
+            dataType: "json",
+            //data: {starttime:starttime,endtime:endtime,name:name},
+            success: function (result) {
+                for (var i = 0; i < result.length; i++) {
+                    $("#QianSelect").append("<option>" + result[i] + "</option>");
+                }
+            },
+            error: function (errorMsg) {
+                //请求失败时执行该函数
+                alert("下拉框加载失败!");
+
+            }
+        });
+        //上面第二个下拉框
+        $.ajax({
+            type: "post",
+            async: false,
+            url: "/CollationMap/SelectHou",
+            dataType: "json",
+            success: function (result) {
+                for (var i = 0; i < result.length; i++) {
+                    $("#HouSelect").append("<option>" + result[i] + "</option>");
+                }
+            },
+            error: function (errorMsg) {
+                //请求失败时执行该函数
+                alert("下拉框加载失败!");
+
+            }
+        });
+
+       
+    })
+
+    var myChart = echarts.init(document.getElementById('main'));
+   
+    //第一个图方法
+    function FirstSearch() {
+        var Qian = $("#QianSelect").find("option:selected").text();
+        var Hou = $("#HouSelect").find("option:selected").text();
+
+        var name = Qian + "\\" + Hou;
+        if (Qian == "--请选择--") {
+            $.messager.alert('温馨提示','请选择第一个下拉框！');
+            return false;
+        }
+        if (Hou == "--请选择--") {
+            $.messager.alert('温馨提示', '请选择第二个下拉框！');
+            return false;
+        }
+        setInterval(
+             $.ajax({
+                 type: "post",
+                 async: true,
+                 url: "/CollationMap/AutoUpdateAction",
+                 dataType: "json",
+                 data: { name: name },
+                 success: function (result) {
+                     for (var i = 0; i < result.length; i++) {
+                         // 指定图表的配置项和数据
+                         var option = {
+                             title: {
+                                 text: name,
+                                 left: 'center',
+                                 textStyle: { color: 'red', fontWeight: 'bold' }
+                             },
+                             tooltip: { trigger: 'axis' },
+                             toolbox: {
+                                 show: true,
+                                 feature: {
+                                     dataZoom: {
+                                         yAxisIndex: 'none'
+                                     },
+                                     dataView: { readOnly: false },
+                                     magicType: { type: ['line', 'bar'] },
+                                     restore: {},
+                                     saveAsImage: {}
+                                 }
+                             },
+                             dataZoom: [{
+                                 type: 'inside',
+                                 start: 0,
+                                 end: 10
+                             }, {
+                                 start: 0,
+                                 end: 10,
+                                 handleSize: '80%',
+                                 handleStyle: {
+
+                                     shadowBlur: 3,
+                                     shadowColor: 'rgba(0, 0, 0, 0.6)',
+                                     shadowOffsetX: 2,
+                                     shadowOffsetY: 2
+                                 }
+                             }],
+                             xAxis: {
+                                 data: eval(result[0].timett),
+                             },
+                             yAxis: {
+                                 min: 'dataMin',
+                                 max: 'dataMan'
+                             },
+                             series: [{
+                                 name: '数据',
+                                 type: 'line',
+                                 smooth: true,
+                                 data: eval(result[0].pvtt),
+                                 label: {
+                                     normal: {
+                                         show: true,
+                                         position: 'top'
+                                     }
+                                 },
+                                 //itemStyle: {
+                                 //    normal: { color: '#337AB7' },
+
+                                 //}
+                             }]
+                         };
+
+                         // 使用刚指定的配置项和数据显示图表。
+                         myChart.setOption(option);
+                         window.addEventListener("resize", function () {
+                             myChart.resize();
+
+                         });
+                     }
+                 },
+                 error: function (errorMsg) {
+                     //请求失败时执行该函数
+                     alert("加载失败！");
+
+                 }
+             }),300000
+            )
+    }
+</script>
+
+
+
+
